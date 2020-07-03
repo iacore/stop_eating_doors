@@ -1,0 +1,64 @@
+stages:
+  - coverage
+  - builddocs
+  - deploy
+  
+coverage:
+  tags:
+    - linux
+  stage: coverage
+  image: debian:testing
+  dependencies: []
+  script:
+    - apt update
+    - apt install -y curl gnupg2 git
+    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt update
+    - apt install -y dart lcov
+    - ln -s /usr/lib/dart/bin/pub /usr/bin/
+    - useradd -m test
+    - chown -R 'test:' '.'
+    - chmod +x ./test.sh
+    - su -c ./test.sh test
+  artifacts:
+    paths:
+      - coverage/
+
+code_analyze:
+  tags:
+    - docker
+  stage: coverage
+  image: cirrusci/flutter
+  dependencies: []
+  script:
+    - flutter format lib/ test/ --set-exit-if-changed
+    - flutter analyze
+
+build-api-doc:
+  tags:
+    - docker
+  stage: builddocs
+  image: cirrusci/flutter
+  script:
+    - dartdoc --exclude "dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui"
+  artifacts:
+    paths:
+      - doc/api/
+  only:
+    - master
+
+pages:
+  tags:
+    - linux
+  stage: deploy
+  image: alpine:latest
+  script:
+    - mv doc/api/ public
+  dependencies:
+    - build-api-doc
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
