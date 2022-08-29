@@ -50,7 +50,8 @@ class Image {
   external dynamic toJpegPromise(int quality);
 }
 
-extension ImageFutures on Image {
+extension ImageExtension on Image {
   Future<Uint8List> toJpeg(int quality) =>
       promiseToFuture(toJpegPromise(quality));
+  Image get sync => this;
 }
